@@ -504,7 +504,7 @@ function updateDirection(angle) {
 
 // ---------- Chart.js Setup ----------
 const MAX_POINTS = 100;
-const labels = [];
+const labels = [], labels2 = [];
 const dataLeft = [], dataRight = [], dataAngle = [], dataEff = [];
 const dataAlign = [], dataPower = [];
 
@@ -550,7 +550,7 @@ const chart = new Chart(document.getElementById('liveChart'), {
 const alignPowerChart = new Chart(document.getElementById('alignPowerChart'), {
   type: 'line',
   data: {
-    labels,
+    labels: labels2,
     datasets: [
       { label: 'Alignment Score', data: dataAlign, borderColor: '#81c784', backgroundColor: 'rgba(129,199,132,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
       { label: 'Simulated Power', data: dataPower, borderColor: '#fff176', backgroundColor: 'rgba(255,241,118,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
@@ -589,6 +589,7 @@ function pushDataPoint(d) {
   const t = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   labels.push(t);
+  labels2.push(t);
   dataLeft.push(d.left);
   dataRight.push(d.right);
   dataAngle.push(d.angle);
@@ -598,6 +599,7 @@ function pushDataPoint(d) {
 
   if (labels.length > MAX_POINTS) {
     labels.shift();
+    labels2.shift();
     dataLeft.shift();
     dataRight.shift();
     dataAngle.shift();
