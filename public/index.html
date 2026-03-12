@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Live dashboard for DIY Arduino Solar Tracker — real-time sensor data, efficiency gauge, and tracking visualization.">
+  <title>Solar Tracker Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* ========== RESET & BASE ========== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:   #0f1117;
+      --bg-secondary: #161925;
+      --bg-card:      rgba(22, 25, 37, 0.65);
+      --border-card:  rgba(255,255,255,0.06);
+      --blue:    #4fc3f7;
+      --orange:  #ffb74d;
+      --green:   #81c784;
+      --yellow:  #fff176;
+      --red:     #e57373;
+      --text:    #e0e0e0;
+      --text-dim:#8892a4;
+      --radius:  16px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ========== STATUS BAR ========== */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 28px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-card);
+      font-size: 0.85rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .status-bar .status-left { display: flex; align-items: center; gap: 10px; }
+    .status-bar .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+    .status-bar .status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .status-bar .status-dot.disconnected { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+    .status-bar .brand { font-weight: 700; font-size: 1rem; color: var(--blue); }
+    .status-bar .timestamp { color: var(--text-dim); font-size: 0.8rem; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ========== LAYOUT ========== */
+    .dashboard {
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+      display: grid;
+      gap: 24px;
+    }
+
+    /* ========== GLASS CARD MIXIN ========== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 24px;
+      transition: box-shadow 0.3s;
+    }
+    .card:hover { box-shadow: 0 0 30px rgba(79,195,247,0.06); }
+    .card-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    /* ========== TOP SECTION: GAUGE + DIRECTION ========== */
+    .top-section {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* Gauge */
+    .gauge-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      position: relative;
+    }
+    .gauge-wrapper canvas { max-width: 320px; }
+    .gauge-value {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .gauge-value .number {
+      font-size: 3.6rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .gauge-value .label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Direction */
+    .direction-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 260px;
+    }
+    .direction-visual {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin-bottom: 12px;
+    }
+    .direction-arc {
+      width: 100%;
+      height: 100%;
+    }
+    .direction-label {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .direction-angle {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      margin-top: 2px;
+    }
+
+    /* ========== STAT CARDS ========== */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .stat-card {
+      text-align: center;
+      padding: 20px 16px;
+    }
+    .stat-card .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 6px 0 2px;
+      transition: color 0.3s;
+    }
+    .stat-card .stat-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-dim);
+    }
+    .stat-card .stat-icon {
+      font-size: 1.5rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .badge-green  { background: rgba(129,199,132,0.15); color: var(--green); }
+    .badge-yellow { background: rgba(255,241,118,0.15); color: var(--yellow); }
+    .badge-red    { background: rgba(229,115,115,0.15); color: var(--red); }
+
+    /* ========== CHART ========== */
+    .chart-card { padding: 20px; }
+    .chart-card canvas { width: 100% !important; height: 320px !important; }
+
+    /* ========== FOOTER ========== */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      line-height: 1.7;
+    }
+    .footer strong { color: var(--text); font-weight: 600; }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 900px) {
+      .top-section { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 500px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      .gauge-value .number { font-size: 2.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== STATUS BAR ===== -->
+  <div class="status-bar">
+    <div class="status-left">
+      <span class="brand">☀️ Solar Tracker</span>
+      <span class="status-dot disconnected" id="statusDot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <span class="timestamp" id="statusTime">—</span>
+  </div>
+
+  <div class="dashboard">
+
+    <!-- ===== GAUGE + DIRECTION ===== -->
+    <div class="top-section">
+      <div class="card gauge-wrapper" id="gaugeCard">
+        <p class="card-title">System Efficiency</p>
+        <canvas id="gaugeCanvas" width="320" height="200"></canvas>
+        <div class="gauge-value">
+          <div class="number" id="gaugeNumber">—</div>
+          <div class="label">Efficiency %</div>
+        </div>
+      </div>
+
+      <div class="card direction-card">
+        <p class="card-title">Tracker Direction</p>
+        <div class="direction-visual">
+          <svg class="direction-arc" viewBox="0 0 180 180">
+            <!-- track -->
+            <path d="M 20 140 A 80 80 0 0 1 160 140" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10" stroke-linecap="round"/>
+            <!-- active arc drawn in JS -->
+            <path id="dirArc" d="M 20 140 A 80 80 0 0 1 160 140" fill="none" stroke="var(--blue)" stroke-width="10" stroke-linecap="round"/>
+            <!-- needle -->
+            <line id="dirNeedle" x1="90" y1="140" x2="90" y2="40" stroke="var(--blue)" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="90" cy="140" r="6" fill="var(--blue)"/>
+          </svg>
+        </div>
+        <div class="direction-label" id="dirLabel">—</div>
+        <div class="direction-angle" id="dirAngle">—</div>
+      </div>
+    </div>
+
+    <!-- ===== STAT CARDS ===== -->
+    <div class="stat-grid">
+      <div class="card stat-card" id="cardLeft">
+        <div class="stat-icon">🔵</div>
+        <div class="stat-value" id="valLeft">—</div>
+        <div class="stat-label">Left Sensor</div>
+      </div>
+      <div class="card stat-card" id="cardRight">
+        <div class="stat-icon">🟠</div>
+        <div class="stat-value" id="valRight">—</div>
+        <div class="stat-label">Right Sensor</div>
+      </div>
+      <div class="card stat-card" id="cardAngle">
+        <div class="stat-icon">📐</div>
+        <div class="stat-value" id="valAngle">—</div>
+        <div class="stat-label">Tracker Angle</div>
+      </div>
+      <div class="card stat-card" id="cardEff">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value" id="valEff">—</div>
+        <div class="stat-label">Efficiency</div>
+        <span class="badge" id="effBadge"></span>
+      </div>
+    </div>
+
+    <!-- ===== LIVE CHART ===== -->
+    <div class="card chart-card">
+      <p class="card-title">Live Telemetry — Last 100 Readings</p>
+      <canvas id="liveChart"></canvas>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <div class="footer">
+    <strong>How to use:</strong> Plug in Arduino → Run <strong>start.bat</strong> → Open browser at <strong>localhost:3000</strong>
+  </div>
+
+<script>
+/* ==========================================================
+   Solar Tracker Dashboard — Frontend Logic
+   ========================================================== */
+
+// ---------- DOM refs ----------
+const statusDot   = document.getElementById('statusDot');
+const statusText  = document.getElementById('statusText');
+const statusTime  = document.getElementById('statusTime');
+const gaugeCanvas = document.getElementById('gaugeCanvas');
+const gaugeNumber = document.getElementById('gaugeNumber');
+const gaugeCard   = document.getElementById('gaugeCard');
+const dirNeedle   = document.getElementById('dirNeedle');
+const dirArc      = document.getElementById('dirArc');
+const dirLabel    = document.getElementById('dirLabel');
+const dirAngle    = document.getElementById('dirAngle');
+const valLeft     = document.getElementById('valLeft');
+const valRight    = document.getElementById('valRight');
+const valAngle    = document.getElementById('valAngle');
+const valEff      = document.getElementById('valEff');
+const effBadge    = document.getElementById('effBadge');
+
+const gaugeCtx = gaugeCanvas.getContext('2d');
+
+// ---------- Efficiency color helper ----------
+function effColor(v) {
+  if (v >= 70) return 'var(--green)';
+  if (v >= 40) return 'var(--yellow)';
+  return 'var(--red)';
+}
+function effColorHex(v) {
+  if (v >= 70) return '#81c784';
+  if (v >= 40) return '#fff176';
+  return '#e57373';
+}
+
+// ---------- Draw Gauge ----------
+function drawGauge(pct) {
+  const W = gaugeCanvas.width;
+  const H = gaugeCanvas.height;
+  const cx = W / 2;
+  const cy = H - 20;
+  const r = Math.min(cx, cy) - 20;
+  const startAngle = Math.PI;
+  const endAngle = 2 * Math.PI;
+
+  gaugeCtx.clearRect(0, 0, W, H);
+
+  // track
+  gaugeCtx.beginPath();
+  gaugeCtx.arc(cx, cy, r, startAngle, endAngle);
+  gaugeCtx.lineWidth = 18;
+  gaugeCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+  gaugeCtx.lineCap = 'round';
+  gaugeCtx.stroke();
+
+  // filled arc
+  const fillAngle = startAngle + (pct / 100) * Math.PI;
+  const color = effColorHex(pct);
+
+  gaugeCtx.beginPath();
+  gaugeCtx.arc(cx, cy, r, startAngle, fillAngle);
+  gaugeCtx.lineWidth = 18;
+  gaugeCtx.strokeStyle = color;
+  gaugeCtx.lineCap = 'round';
+  gaugeCtx.shadowColor = color;
+  gaugeCtx.shadowBlur = pct > 60 ? 20 : 6;
+  gaugeCtx.stroke();
+  gaugeCtx.shadowBlur = 0;
+
+  // tick marks
+  for (let i = 0; i <= 10; i++) {
+    const angle = startAngle + (i / 10) * Math.PI;
+    const inner = r - 26;
+    const outer = r - 18;
+    gaugeCtx.beginPath();
+    gaugeCtx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+    gaugeCtx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+    gaugeCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+    gaugeCtx.lineWidth = 1.5;
+    gaugeCtx.shadowBlur = 0;
+    gaugeCtx.stroke();
+  }
+
+  // glow effect on card
+  if (pct > 60) {
+    gaugeCard.style.boxShadow = `0 0 ${pct / 2}px ${color}33`;
+  } else {
+    gaugeCard.style.boxShadow = '';
+  }
+}
+
+// ---------- Direction Indicator ----------
+function updateDirection(angle) {
+  // Angle range 10–170 mapped to SVG semicircle
+  const norm = (angle - 10) / 160; // 0 → 1
+  const svgAngle = Math.PI + norm * Math.PI; // π → 2π  (left → right in SVG)
+  const cx = 90, cy = 140, len = 90;
+
+  const nx = cx + Math.cos(svgAngle) * len;
+  const ny = cy + Math.sin(svgAngle) * len;
+  dirNeedle.setAttribute('x2', nx);
+  dirNeedle.setAttribute('y2', ny);
+
+  let label, color;
+  if (angle < 80)       { label = '← LEFT';   color = 'var(--orange)'; }
+  else if (angle <= 100) { label = '● CENTER'; color = 'var(--green)'; }
+  else                   { label = 'RIGHT →';  color = 'var(--blue)'; }
+
+  dirNeedle.setAttribute('stroke', color);
+  dirArc.setAttribute('stroke', color);
+  dirLabel.textContent = label;
+  dirLabel.style.color = color;
+  dirAngle.textContent = `${angle}°`;
+}
+
+// ---------- Chart.js Setup ----------
+const MAX_POINTS = 100;
+const labels = [];
+const dataLeft = [], dataRight = [], dataAngle = [], dataEff = [];
+
+const chart = new Chart(document.getElementById('liveChart'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      { label: 'Left Sensor',  data: dataLeft,  borderColor: '#4fc3f7', backgroundColor: 'rgba(79,195,247,0.08)',  tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Right Sensor', data: dataRight, borderColor: '#ffb74d', backgroundColor: 'rgba(255,183,77,0.08)',  tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Tracker Angle',data: dataAngle, borderColor: '#81c784', backgroundColor: 'rgba(129,199,132,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Efficiency %', data: dataEff,   borderColor: '#fff176', backgroundColor: 'rgba(255,241,118,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 200 },
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: {
+        display: true,
+        ticks: { color: '#8892a4', maxTicksLimit: 8, font: { size: 10, family: 'Inter' } },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+      },
+      y: {
+        display: true,
+        min: 0,
+        suggestedMax: 1023,
+        ticks: { color: '#8892a4', font: { size: 10, family: 'Inter' } },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+      }
+    },
+    plugins: {
+      legend: {
+        display: true,
+        labels: { color: '#e0e0e0', font: { family: 'Inter', size: 11 }, usePointStyle: true, pointStyle: 'circle', padding: 16 }
+      }
+    }
+  }
+});
+
+function pushDataPoint(d) {
+  const now = new Date();
+  const t = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  labels.push(t);
+  dataLeft.push(d.left);
+  dataRight.push(d.right);
+  dataAngle.push(d.angle);
+  dataEff.push(d.efficiency);
+
+  if (labels.length > MAX_POINTS) {
+    labels.shift();
+    dataLeft.shift();
+    dataRight.shift();
+    dataAngle.shift();
+    dataEff.shift();
+  }
+
+  chart.update();
+}
+
+// ---------- Update UI with new data ----------
+function updateUI(d) {
+  // Stat cards
+  valLeft.textContent = d.left;
+  valRight.textContent = d.right;
+  valAngle.textContent = d.angle + '°';
+  valEff.textContent = d.efficiency + '%';
+
+  // Efficiency badge
+  if (d.efficiency >= 70) {
+    effBadge.textContent = 'HIGH';
+    effBadge.className = 'badge badge-green';
+  } else if (d.efficiency >= 40) {
+    effBadge.textContent = 'MEDIUM';
+    effBadge.className = 'badge badge-yellow';
+  } else {
+    effBadge.textContent = 'LOW';
+    effBadge.className = 'badge badge-red';
+  }
+  valEff.style.color = effColor(d.efficiency);
+
+  // Gauge
+  gaugeNumber.textContent = d.efficiency + '%';
+  gaugeNumber.style.color = effColor(d.efficiency);
+  drawGauge(d.efficiency);
+
+  // Direction
+  updateDirection(d.angle);
+
+  // Chart
+  pushDataPoint(d);
+
+  // Timestamp
+  statusTime.textContent = 'Last update: ' + new Date().toLocaleTimeString();
+}
+
+// ---------- WebSocket Connection ----------
+let ws;
+function connect() {
+  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${protocol}://${location.host}`);
+
+  ws.onopen = () => {
+    statusDot.className = 'status-dot connected';
+    statusText.textContent = 'Connected — COM5 @ 9600 baud';
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      updateUI(data);
+    } catch (e) {
+      console.warn('Bad message:', event.data);
+    }
+  };
+
+  ws.onclose = () => {
+    statusDot.className = 'status-dot disconnected';
+    statusText.textContent = 'Disconnected — retrying...';
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+// ---------- Init ----------
+drawGauge(0);
+connect();
+</script>
+</body>
+</html>

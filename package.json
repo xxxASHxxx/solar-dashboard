@@ -1,0 +1,14 @@
+{
+  "name": "solar-tracker-dashboard",
+  "version": "1.0.0",
+  "description": "Live dashboard for DIY Arduino Solar Tracker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0",
+    "@serialport/parser-readline": "^12.0.0",
+    "ws": "^8.16.0"
+  }
+}
