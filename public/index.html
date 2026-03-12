@@ -13,23 +13,26 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg-primary:   #0f1117;
-      --bg-secondary: #161925;
-      --bg-card:      rgba(22, 25, 37, 0.65);
-      --border-card:  rgba(255,255,255,0.06);
-      --blue:    #4fc3f7;
-      --orange:  #ffb74d;
-      --green:   #81c784;
-      --yellow:  #fff176;
-      --red:     #e57373;
-      --text:    #e0e0e0;
-      --text-dim:#8892a4;
-      --radius:  16px;
+      --bg-primary:   #090b10;
+      --bg-secondary: #111520;
+      --bg-card:      rgba(15, 20, 31, 0.65);
+      --border-card:  rgba(255, 171, 64, 0.15);
+      --blue:         #00e5ff;
+      --orange:       #ff9800;
+      --green:        #00e676;
+      --yellow:       #ffea00;
+      --amber:        #ffb300;
+      --red:          #ff1744;
+      --text:         #f5f6fa;
+      --text-dim:     #8d99ae;
+      --radius:       16px;
+      --sun-glow:     rgba(255, 152, 0, 0.22);
     }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--bg-primary);
+      background: radial-gradient(circle at 50% -20%, #2a1b08 0%, var(--bg-primary) 60%, var(--bg-primary) 100%);
+      background-attachment: fixed;
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
@@ -41,13 +44,15 @@
       align-items: center;
       justify-content: space-between;
       padding: 12px 28px;
-      background: var(--bg-secondary);
+      background: rgba(17, 21, 32, 0.85);
       border-bottom: 1px solid var(--border-card);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.4);
       font-size: 0.85rem;
       position: sticky;
       top: 0;
       z-index: 100;
       backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
     .status-bar .status-left { display: flex; align-items: center; gap: 10px; }
     .status-bar .status-dot {
@@ -55,14 +60,23 @@
       display: inline-block;
       animation: pulse 2s infinite;
     }
-    .status-bar .status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
-    .status-bar .status-dot.disconnected { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
-    .status-bar .brand { font-weight: 700; font-size: 1rem; color: var(--blue); }
-    .status-bar .timestamp { color: var(--text-dim); font-size: 0.8rem; }
+    .status-bar .status-dot.connected { background: var(--green); box-shadow: 0 0 10px var(--green); }
+    .status-bar .status-dot.disconnected { background: var(--red); box-shadow: 0 0 10px var(--red); animation: none; }
+    .status-bar .brand { 
+      font-weight: 800; 
+      font-size: 1.1rem; 
+      background: linear-gradient(90deg, #ffea00, #ff9800);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .status-bar .timestamp { color: var(--text-dim); font-size: 0.8rem; font-weight: 500; }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+      0%, 100% { opacity: 1; box-shadow: 0 0 12px var(--green); }
+      50% { opacity: 0.5; box-shadow: 0 0 2px var(--green); }
     }
 
     /* ========== LAYOUT ========== */
@@ -79,17 +93,23 @@
       background: var(--bg-card);
       border: 1px solid var(--border-card);
       border-radius: var(--radius);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       padding: 24px;
-      transition: box-shadow 0.3s;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
     }
-    .card:hover { box-shadow: 0 0 30px rgba(79,195,247,0.06); }
+    .card:hover { 
+      box-shadow: 0 12px 40px var(--sun-glow); 
+      transform: translateY(-4px);
+      border-color: rgba(255, 171, 64, 0.4);
+    }
     .card-title {
-      font-size: 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1.6px;
-      color: var(--text-dim);
+      color: var(--amber);
       margin-bottom: 8px;
     }
 
@@ -119,14 +139,19 @@
       text-align: center;
     }
     .gauge-value .number {
-      font-size: 3.6rem;
+      font-size: 3.8rem;
       font-weight: 800;
       line-height: 1;
+      text-shadow: 0 0 20px rgba(0,0,0,0.5);
+      letter-spacing: -1px;
     }
     .gauge-value .label {
       font-size: 0.8rem;
+      font-weight: 600;
       color: var(--text-dim);
-      margin-top: 4px;
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     /* Direction */
@@ -150,13 +175,16 @@
     }
     .direction-label {
       font-size: 1.3rem;
-      font-weight: 700;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
       margin-top: 4px;
     }
     .direction-angle {
       color: var(--text-dim);
       font-size: 0.85rem;
-      margin-top: 2px;
+      font-weight: 600;
+      margin-top: 4px;
     }
 
     /* ========== STAT CARDS ========== */
@@ -170,31 +198,35 @@
       padding: 20px 16px;
     }
     .stat-card .stat-value {
-      font-size: 2rem;
-      font-weight: 700;
-      margin: 6px 0 2px;
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin: 8px 0 4px;
       transition: color 0.3s;
+      text-shadow: 0 0 10px rgba(255,255,255,0.05);
     }
     .stat-card .stat-label {
       font-size: 0.72rem;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1.2px;
       color: var(--text-dim);
     }
     .stat-card .stat-icon {
-      font-size: 1.5rem;
+      font-size: 1.8rem;
+      filter: drop-shadow(0 0 8px rgba(255,167,38,0.3));
     }
     .badge {
       display: inline-block;
-      padding: 2px 10px;
+      padding: 4px 12px;
       border-radius: 20px;
       font-size: 0.7rem;
-      font-weight: 600;
-      margin-top: 6px;
+      font-weight: 700;
+      margin-top: 8px;
+      letter-spacing: 0.5px;
     }
-    .badge-green  { background: rgba(129,199,132,0.15); color: var(--green); }
-    .badge-yellow { background: rgba(255,241,118,0.15); color: var(--yellow); }
-    .badge-red    { background: rgba(229,115,115,0.15); color: var(--red); }
+    .badge-green  { background: rgba(0, 230, 118, 0.15); color: var(--green); border: 1px solid rgba(0, 230, 118, 0.4); box-shadow: 0 0 10px rgba(0, 230, 118, 0.2); }
+    .badge-yellow { background: rgba(255, 234, 0, 0.15); color: var(--yellow); border: 1px solid rgba(255, 234, 0, 0.4); box-shadow: 0 0 10px rgba(255, 234, 0, 0.2); }
+    .badge-red    { background: rgba(255, 23, 68, 0.15); color: var(--red); border: 1px solid rgba(255, 23, 68, 0.4); box-shadow: 0 0 10px rgba(255, 23, 68, 0.2); }
 
     /* ========== CHART ========== */
     .chart-card { padding: 20px; }
@@ -223,14 +255,16 @@
       text-align: center;
     }
     .session-stat .value {
-      font-size: 1.6rem;
-      font-weight: 700;
+      font-size: 1.8rem;
+      font-weight: 800;
       color: var(--text);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      text-shadow: 0 0 15px rgba(255,255,255,0.1);
     }
     .session-stat .label {
       font-size: 0.75rem;
-      color: var(--text-dim);
+      font-weight: 600;
+      color: var(--amber);
       text-transform: uppercase;
       letter-spacing: 1px;
     }
@@ -417,9 +451,9 @@ function effColor(v) {
   return 'var(--red)';
 }
 function effColorHex(v) {
-  if (v >= 70) return '#81c784';
-  if (v >= 40) return '#fff176';
-  return '#e57373';
+  if (v >= 70) return '#00e676';
+  if (v >= 40) return '#ffea00';
+  return '#ff1744';
 }
 
 // ---------- Draw Gauge ----------
@@ -452,7 +486,7 @@ function drawGauge(pct) {
   gaugeCtx.strokeStyle = color;
   gaugeCtx.lineCap = 'round';
   gaugeCtx.shadowColor = color;
-  gaugeCtx.shadowBlur = pct > 60 ? 20 : 6;
+  gaugeCtx.shadowBlur = pct > 60 ? 30 : 15;
   gaugeCtx.stroke();
   gaugeCtx.shadowBlur = 0;
 
@@ -472,7 +506,7 @@ function drawGauge(pct) {
 
   // glow effect on card
   if (pct > 60) {
-    gaugeCard.style.boxShadow = `0 0 ${pct / 2}px ${color}33`;
+    gaugeCard.style.boxShadow = `0 0 ${pct / 1.5}px ${color}4d`;
   } else {
     gaugeCard.style.boxShadow = '';
   }
@@ -513,10 +547,10 @@ const chart = new Chart(document.getElementById('liveChart'), {
   data: {
     labels,
     datasets: [
-      { label: 'Left Sensor',  data: dataLeft,  borderColor: '#4fc3f7', backgroundColor: 'rgba(79,195,247,0.08)',  tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
-      { label: 'Right Sensor', data: dataRight, borderColor: '#ffb74d', backgroundColor: 'rgba(255,183,77,0.08)',  tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
-      { label: 'Tracker Angle',data: dataAngle, borderColor: '#81c784', backgroundColor: 'rgba(129,199,132,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
-      { label: 'Efficiency %', data: dataEff,   borderColor: '#fff176', backgroundColor: 'rgba(255,241,118,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Left Sensor',  data: dataLeft,  borderColor: '#00e5ff', backgroundColor: 'rgba(0, 229, 255, 0.1)',  tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Right Sensor', data: dataRight, borderColor: '#ff9800', backgroundColor: 'rgba(255, 152, 0, 0.1)',  tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Tracker Angle',data: dataAngle, borderColor: '#00e676', backgroundColor: 'rgba(0, 230, 118, 0.1)', tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Efficiency %', data: dataEff,   borderColor: '#ffea00', backgroundColor: 'rgba(255, 234, 0, 0.1)', tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true },
     ]
   },
   options: {
@@ -552,8 +586,8 @@ const alignPowerChart = new Chart(document.getElementById('alignPowerChart'), {
   data: {
     labels: labels2,
     datasets: [
-      { label: 'Alignment Score', data: dataAlign, borderColor: '#81c784', backgroundColor: 'rgba(129,199,132,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
-      { label: 'Simulated Power', data: dataPower, borderColor: '#fff176', backgroundColor: 'rgba(255,241,118,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Alignment Score', data: dataAlign, borderColor: '#00e676', backgroundColor: 'rgba(0, 230, 118, 0.1)', tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Simulated Power', data: dataPower, borderColor: '#ffea00', backgroundColor: 'rgba(255, 234, 0, 0.1)', tension: 0.4, pointRadius: 0, borderWidth: 2, fill: true },
     ]
   },
   options: {
