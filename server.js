@@ -62,7 +62,7 @@ function broadcast(data) {
 }
 
 // ---------- Serial line parser ----------
-const LINE_REGEX = /Left_Sensor:(\d+),Right_Sensor:(\d+),Tracker_Angle:(\d+),Estimated_Efficiency_%:(\d+)/;
+const LINE_REGEX = /Left_Sensor:(\d+),Right_Sensor:(\d+),Tracker_Angle:(\d+),Estimated_Efficiency_%:(\d+),Alignment_Score:(\d+),Simulated_Power_mW:(\d+),Imbalance_%:(\d+),Tracking_Events:(\d+)/;
 
 function parseLine(line) {
   const match = line.match(LINE_REGEX);
@@ -72,6 +72,10 @@ function parseLine(line) {
     right: parseInt(match[2], 10),
     angle: parseInt(match[3], 10),
     efficiency: parseInt(match[4], 10),
+    alignment: parseInt(match[5], 10),
+    power: parseInt(match[6], 10),
+    imbalance: parseInt(match[7], 10),
+    trackingEvents: parseInt(match[8], 10),
   };
 }
 

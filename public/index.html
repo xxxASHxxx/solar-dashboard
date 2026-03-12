@@ -210,6 +210,31 @@
     }
     .footer strong { color: var(--text); font-weight: 600; }
 
+    /* ========== SESSION STATS ========== */
+    .session-stats {
+      display: flex;
+      justify-content: space-around;
+      gap: 16px;
+    }
+    .session-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .session-stat .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .session-stat .label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
     /* ========== RESPONSIVE ========== */
     @media (max-width: 900px) {
       .top-section { grid-template-columns: 1fr; }
@@ -287,12 +312,58 @@
         <div class="stat-label">Efficiency</div>
         <span class="badge" id="effBadge"></span>
       </div>
+      <div class="card stat-card" id="cardAlign">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-value" id="valAlign">—</div>
+        <div class="stat-label">Tracker Alignment</div>
+        <span class="badge" id="alignBadge"></span>
+      </div>
+      <div class="card stat-card" id="cardPower">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value" id="valPower">—</div>
+        <div class="stat-label">Simulated Power</div>
+      </div>
+      <div class="card stat-card" id="cardImbalance">
+        <div class="stat-icon">⚖️</div>
+        <div class="stat-value" id="valImbalance">—</div>
+        <div class="stat-label">Light Imbalance</div>
+        <span class="badge" id="imbalanceBadge"></span>
+      </div>
+      <div class="card stat-card" id="cardEvents">
+        <div class="stat-icon">🔄</div>
+        <div class="stat-value" id="valEvents">—</div>
+        <div class="stat-label">Tracking Events</div>
+      </div>
     </div>
 
     <!-- ===== LIVE CHART ===== -->
     <div class="card chart-card">
       <p class="card-title">Live Telemetry — Last 100 Readings</p>
       <canvas id="liveChart"></canvas>
+    </div>
+
+    <!-- ===== ALIGNMENT & POWER CHART ===== -->
+    <div class="card chart-card">
+      <p class="card-title">Alignment & Power Over Time</p>
+      <canvas id="alignPowerChart"></canvas>
+    </div>
+
+    <!-- ===== SESSION STATS ===== -->
+    <div class="card session-stats-card">
+      <div class="session-stats">
+        <div class="session-stat">
+          <div class="value" id="sessionPeakEff">—</div>
+          <div class="label">Peak Efficiency</div>
+        </div>
+        <div class="session-stat">
+          <div class="value" id="sessionTotalCorrections">—</div>
+          <div class="label">Total Corrections</div>
+        </div>
+        <div class="session-stat">
+          <div class="value" id="sessionAvgAlign">—</div>
+          <div class="label">Avg Alignment</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -323,7 +394,21 @@ const valAngle    = document.getElementById('valAngle');
 const valEff      = document.getElementById('valEff');
 const effBadge    = document.getElementById('effBadge');
 
+const valAlign    = document.getElementById('valAlign');
+const alignBadge  = document.getElementById('alignBadge');
+const valPower    = document.getElementById('valPower');
+const valImbalance= document.getElementById('valImbalance');
+const imbalanceBadge = document.getElementById('imbalanceBadge');
+const valEvents   = document.getElementById('valEvents');
+
+const sessionPeakEff = document.getElementById('sessionPeakEff');
+const sessionTotalCorrections = document.getElementById('sessionTotalCorrections');
+const sessionAvgAlign = document.getElementById('sessionAvgAlign');
+
 const gaugeCtx = gaugeCanvas.getContext('2d');
+
+let peakEff = 0;
+const alignHistory = [];
 
 // ---------- Efficiency color helper ----------
 function effColor(v) {
@@ -421,6 +506,7 @@ function updateDirection(angle) {
 const MAX_POINTS = 100;
 const labels = [];
 const dataLeft = [], dataRight = [], dataAngle = [], dataEff = [];
+const dataAlign = [], dataPower = [];
 
 const chart = new Chart(document.getElementById('liveChart'), {
   type: 'line',
@@ -461,6 +547,43 @@ const chart = new Chart(document.getElementById('liveChart'), {
   }
 });
 
+const alignPowerChart = new Chart(document.getElementById('alignPowerChart'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      { label: 'Alignment Score', data: dataAlign, borderColor: '#81c784', backgroundColor: 'rgba(129,199,132,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
+      { label: 'Simulated Power', data: dataPower, borderColor: '#fff176', backgroundColor: 'rgba(255,241,118,0.08)', tension: 0.35, pointRadius: 0, borderWidth: 2, fill: true },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 200 },
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: {
+        display: true,
+        ticks: { color: '#8892a4', maxTicksLimit: 8, font: { size: 10, family: 'Inter' } },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+      },
+      y: {
+        display: true,
+        min: 0,
+        suggestedMax: 100,
+        ticks: { color: '#8892a4', font: { size: 10, family: 'Inter' } },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+      }
+    },
+    plugins: {
+      legend: {
+        display: true,
+        labels: { color: '#e0e0e0', font: { family: 'Inter', size: 11 }, usePointStyle: true, pointStyle: 'circle', padding: 16 }
+      }
+    }
+  }
+});
+
 function pushDataPoint(d) {
   const now = new Date();
   const t = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -470,6 +593,8 @@ function pushDataPoint(d) {
   dataRight.push(d.right);
   dataAngle.push(d.angle);
   dataEff.push(d.efficiency);
+  dataAlign.push(d.alignment);
+  dataPower.push(d.power);
 
   if (labels.length > MAX_POINTS) {
     labels.shift();
@@ -477,9 +602,12 @@ function pushDataPoint(d) {
     dataRight.shift();
     dataAngle.shift();
     dataEff.shift();
+    dataAlign.shift();
+    dataPower.shift();
   }
 
   chart.update();
+  alignPowerChart.update();
 }
 
 // ---------- Update UI with new data ----------
@@ -489,6 +617,31 @@ function updateUI(d) {
   valRight.textContent = d.right;
   valAngle.textContent = d.angle + '°';
   valEff.textContent = d.efficiency + '%';
+
+  valAlign.textContent = d.alignment + '%';
+  if (d.alignment >= 80) {
+    alignBadge.textContent = 'GOOD';
+    alignBadge.className = 'badge badge-green';
+  } else if (d.alignment >= 50) {
+    alignBadge.textContent = 'FAIR';
+    alignBadge.className = 'badge badge-yellow';
+  } else {
+    alignBadge.textContent = 'POOR';
+    alignBadge.className = 'badge badge-red';
+  }
+
+  valPower.textContent = d.power + ' mW';
+
+  valImbalance.textContent = d.imbalance + '%';
+  if (d.imbalance === 0) {
+    imbalanceBadge.textContent = 'PERFECT';
+    imbalanceBadge.className = 'badge badge-green';
+  } else {
+    imbalanceBadge.textContent = 'OFF';
+    imbalanceBadge.className = 'badge badge-red';
+  }
+
+  valEvents.textContent = d.trackingEvents + ' corrections';
 
   // Efficiency badge
   if (d.efficiency >= 70) {
@@ -513,6 +666,17 @@ function updateUI(d) {
 
   // Chart
   pushDataPoint(d);
+
+  // Session Stats
+  if (d.efficiency > peakEff) peakEff = d.efficiency;
+  
+  alignHistory.push(d.alignment);
+  if (alignHistory.length > 20) alignHistory.shift();
+  const avgA = alignHistory.reduce((a, b) => a + b, 0) / alignHistory.length;
+
+  sessionPeakEff.textContent = peakEff + '%';
+  sessionTotalCorrections.textContent = d.trackingEvents;
+  sessionAvgAlign.textContent = Math.round(avgA) + '%';
 
   // Timestamp
   statusTime.textContent = 'Last update: ' + new Date().toLocaleTimeString();
